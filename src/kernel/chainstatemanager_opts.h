@@ -48,6 +48,7 @@ struct ChainstateManagerOpts {
     ValidationSignals* signals{nullptr};
     //! Number of script check worker threads. Zero means no parallel verification.
     int worker_threads_num{0};
+    std::optional<uint256>  sync_end_block{};
 };
 
 } // namespace kernel

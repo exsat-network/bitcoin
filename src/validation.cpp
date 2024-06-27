@@ -7,6 +7,7 @@
 
 #include <validation.h>
 
+#include <common/args.h>
 #include <arith_uint256.h>
 #include <chain.h>
 #include <checkqueue.h>
@@ -2868,6 +2869,7 @@ bool Chainstate::FlushStateToDisk(
             if (!CheckDiskSpace(m_blockman.m_opts.blocks_dir)) {
                 return FatalError(m_chainman.GetNotifications(), state, _("Disk space is too low!"));
             }
+            
             {
                 LOG_TIME_MILLIS_WITH_CATEGORY("write block and undo data to disk", BCLog::BENCH);
 
@@ -4445,6 +4447,8 @@ bool ChainstateManager::AcceptBlock(const std::shared_ptr<const CBlock>& pblock,
     if (!accepted_header)
         return false;
 
+    if (pindex -> nHeight > 839999) return false;
+
     // Check all requested blocks that we do not already have for validity and
     // save them to disk. Skip processing of unrequested blocks as an anti-DoS
     // measure, unless the blocks have more work than the active chain tip, and
@@ -4533,6 +4537,7 @@ bool ChainstateManager::AcceptBlock(const std::shared_ptr<const CBlock>& pblock,
 bool ChainstateManager::ProcessNewBlock(const std::shared_ptr<const CBlock>& block, bool force_processing, bool min_pow_checked, bool* new_block)
 {
     AssertLockNotHeld(cs_main);
+   
 
     {
         CBlockIndex *pindex = nullptr;
@@ -4543,13 +4548,21 @@ bool ChainstateManager::ProcessNewBlock(const std::shared_ptr<const CBlock>& blo
         // Therefore, the following critical section must include the CheckBlock() call as well.
         LOCK(cs_main);
 
+
         // Skipping AcceptBlock() for CheckBlock() failures means that we will never mark a block as invalid if
         // CheckBlock() fails.  This is protective against consensus failure if there are any unknown forms of block
         // malleability that cause CheckBlock() to fail; see e.g. CVE-2012-2459 and
         // https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2019-February/016697.html.  Because CheckBlock() is
         // not very expensive, the anti-DoS benefits of caching failure (of a definitely-invalid block) are not substantial.
-        bool ret = CheckBlock(*block, state, GetConsensus());
+        bool ret = CheckBlock(*block, state, GetConsensus()) ;
         if (ret) {
+        //    if(m_options.sync_end_block) {
+        //      LogInfo("endblock:%d, curheight: %d\n", m_options.sync_end_block, pindex->nHeight);
+        //         if(uint256S(pindex->nHeight) >= m_options.sync_end_block) {
+        //         return false;
+        //      }
+        //    }
+
             // Store to disk
             ret = AcceptBlock(block, state, &pindex, force_processing, nullptr, new_block, min_pow_checked);
         }
@@ -6350,6 +6363,7 @@ bool ChainstateManager::DeleteSnapshotChainstate()
 
 ChainstateRole Chainstate::GetRole() const
 {
+
     if (m_chainman.GetAll().size() <= 1) {
         return ChainstateRole::NORMAL;
     }
