@@ -150,6 +150,22 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = m_chainstate.m_chainman.GenerateCoinbaseCommitment(*pblock, pindexPrev);
     pblocktemplate->vTxFees[0] = -nFees;
+    // Add Exsat mine vout
+
+    CTxOut out;
+    out.nValue = 0;
+
+    // The data to be included in the scriptPubKey
+    std::vector<unsigned char> data = {
+        0x6a, 0x11, 0x45, 0x58, 0x53, 0x41, 0x54, 0x01, 0x11,
+        0x04, 0x13, 0x14, 0x11, 0x0d, 0x1f, 0x17, 0x12, 0x00, 0x13
+    };
+
+    // Resize scriptPubKey to fit OP_RETURN and the data
+    out.scriptPubKey.resize(data.size());
+    std::copy(data.begin(), data.end(), out.scriptPubKey.begin());
+
+    coinbaseTx.vout.push_back(out);
 
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
 
